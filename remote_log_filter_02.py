@@ -16,7 +16,7 @@ import posixpath
 
 
 # 2. 定义函数
-def filter_remote_log(host, port, username, password, log_path, keyword, lines=500):
+def filter_remote_log(host, port, username, password, log_path, log_filename, keyword, lines=500):
     """
     连接远程服务器，读取指定日志文件的最后 lines 行，并筛选 keyword
     """
@@ -56,6 +56,7 @@ def filter_remote_log(host, port, username, password, log_path, keyword, lines=5
         error = stderr.read().decode("utf-8", errors="ignore")
 
         if result:
+            save_result(app_name=log_filename, keyword=keyword, content=result)
             print(result)
         else:
             print("没有匹配到日志")
@@ -137,6 +138,7 @@ if __name__ == "__main__":
         username=server_config["username"],
         password=server_config["password"],
         log_path=log_path,
+        log_filename=args.log_filename,
         keyword=args.keyword,
         lines=args.lines,
     )
