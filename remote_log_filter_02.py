@@ -1,4 +1,7 @@
 # 1. 导入库
+# datetime 是一个标准库，用于处理日期和时间，可以帮助我们生成带有时间戳的文件名，方便保存筛选结果。
+from datetime import datetime
+
 # paramiko 是一个第三方库，用于实现 SSH 协议，允许我们在 Python 中连接远程服务器并执行命令。
 import paramiko
 
@@ -79,12 +82,28 @@ def load_server_config(env, config_path="config.json"):
     return config[env]
 
 
+def save_result(app_name, keyword, content):
+    """
+    将筛选结果保存到本地文件
+    """
+    now = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"result_{app_name}_{keyword}_{now}.txt"
+    
+    # 使用 with 语句可以确保文件正确关闭，即使在写入过程中发生错误也能保证资源的释放。
+    # with ... as f: 是 Python 中处理文件的推荐方式，它会自动管理文件的打开和关闭，避免忘记关闭文件导致资源泄漏的问题。
+    
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(content)
+
+    print(f"筛选结果已保存：{filename}")
+
+
 # 使用示例：
 # python remote_log_filter.py --log-filename sms-customer-boot --keyword info
 
 # 3. 只有直接运行这个文件时才执行
 if __name__ == "__main__":
-    
+
     # 还可以写在函数外面，这样在导入这个模块时就会执行一次，加载配置文件并打印出来。
     # 但是如果配置文件很大或者需要频繁读取，可能会影响性能，或者在导入模块时就需要配置文件存在，否则会抛出异常。
     # argparse 是一个标准库，用于解析命令行参数，使得我们可以从命令行传递参数给脚本。
