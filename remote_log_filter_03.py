@@ -16,7 +16,7 @@ import posixpath
 
 
 # 2. 定义函数
-def filter_remote_log(host, port, username, password, log_path, log_filename, keyword, lines=500):
+def filter_remote_log(host, port, username, password, log_path, log_filename, keywords, lines=500):
     """
     连接远程服务器，读取指定日志文件的最后 lines 行，并筛选 keyword
     """
@@ -69,6 +69,38 @@ def filter_remote_log(host, port, username, password, log_path, log_filename, ke
         # 7. 关闭 SSH 连接
         ssh.close()
 
+def build_grep_command(log_path, keywords, lines=500, mode="any"):
+    """
+    构建远程日志筛选命令。
+
+    mode=any:
+        任意一个关键字匹配即可。
+
+    mode=all:
+        必须同时包含所有关键字。
+    """
+
+    safe_log_path = shlex.quote(log_path)
+
+    # 先 tail 最近 N 行
+    command = f"tail -n {lines} {safe_log_path}"
+
+    if mode == "any":
+        # grep -F 表示按普通字符串匹配，不把关键字当正则
+        # -i 表示忽略大小写
+        grep_parts = " ".join(
+            f"-e {shlex.quote(keyword)}" for keyword in keywords
+        )
+
+        command = f"{command} | grep --color=never -i -F {grep_parts}"
+
+    elif mode == "all":
+        # 必须全部匹配：多个 grep 串起来
+        for keyword in keywords:
+            safe_keyword = shlex.quote(keyword)
+            command = f"{command} | grep --color=never -i -F {safe_keyword}"
+
+    return command
 
 def load_server_config(env, config_path="config.json"):
     """
@@ -119,19 +151,19 @@ if __name__ == "__main__":
         "--log-filename", required=True, help="日志文件路径（必须提供）"
     )
     parser.add_argument(
-    "--keywords",
-    # nargs="+" 表示这个参数后面可以接收多个值
-    nargs="+",
-    required=True,
-    help="筛选关键字，支持多个，例如 ERROR timeout Exception"
-)
+        "--keywords",
+        # nargs="+" 表示这个参数后面可以接收多个值
+        nargs="+",
+        required=True,
+        help="筛选关键字，支持多个，例如 ERROR timeout Exception"
+    )
 
-parser.add_argument(
-    "--mode",
-    choices=["any", "all"],
-    default="any",
-    help="匹配模式：any=匹配任意一个，all=必须全部匹配，默认 any"
-)
+    parser.add_argument(
+        "--mode",
+        choices=["any", "all"],
+        default="any",
+        help="匹配模式：any=匹配任意一个，all=必须全部匹配，默认 any"
+    )
 
     # 解析命令行参数
     args = parser.parse_args()
